@@ -1,0 +1,62 @@
+
+services:
+  web:
+    build: .
+    container_name: book_web
+    command: python manage.py runserver 0.0.0.0:8000
+    restart: always
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    links:
+      - db
+      - redis
+    environment:
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASS}@db:5432/${POSTGRES_DB}
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
+    networks:
+      - book_network
+
+  redis:
+    image: "redis:alpine"
+    container_name: book_redis
+    networks:
+      - book_network
+
+
+  db:
+    image: postgres:13
+    container_name: book_db
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASS}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - book_network
+
+  cache:
+    image: redis:alpine
+    container_name: book_redis_cache
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  book_network:
+    external: false
